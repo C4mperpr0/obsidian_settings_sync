@@ -3,6 +3,7 @@ import os
 from obsidianSettingsSync import ObsidianSettingsSync
 import argparse
 import copy
+import config
 
 __version__ = "Version 1.1.0 of ObsidianSettingsSync by Carl Heinrich Bellgardt"
 
@@ -13,6 +14,7 @@ def main():
   parser = argparse.ArgumentParser(description='Command line tool to sync obsidian settings and plugins between vaults because somehow obsidian still can\'t do this on it\'s own like it\' 1984.')
 
   # arguments and flags
+  parser.add_argument('--init', '-i', action='store_true', help='Start the setup procedure of this program. Will automatically be started at first run or if config is not found or corrupt.')
   parser.add_argument('--list-vaults', '-l', action='store_true', help='List all vault registered in obsidian config file.')
   parser.add_argument('--list-synced', '-s', action='store_true', help='List all files and folders that are synced between vaults.')
   parser.add_argument('--add-synced', '-a', action='store', help='Add item to sync list.')
@@ -28,21 +30,38 @@ def main():
   args = parser.parse_args()
 
   ### initialize
-  def load_config():
-    if os.path.exists("config.json"):
-      with open("config.json", "r") as file:
-        return json.loads(file.read())
-    else:
-      print("no config found!")
+  INIT_CONFIG = config.load_config()
 
-  def save_config(config):
-    with open("config.json", "w+") as file:
-      file.write(json.dumps(config, indent=4))
+  # Setup helper
+  if config is None or args.init:
+    print("""
+      Welcome to the Obsidian Settings Sync Setup helper!\n The Setup helper is only starting the very first time this program is launched or if it could not detect a valid config.
+      If you want to re-run this, just type \"obsidiansettingssync --init\" or type \"obsidiansettingssync --help\" for more information on how to use this tool.
+      We now will set everything up together.\n
+      """)
+    INIT_CONFIG = config.default_config()
+    print("\n-------------------- OBSIDIAN CONFIG FILE --------------------")
+    print("Where is your obsidian config file (obsidian.json) located? Give the full path! (for example \"/home/exampleuser/.config/obsidian/obsidian.json\")")
 
-  INIT_CONFIG = load_config()
+    while True:
+      path = input(" >> ")
+      try:
+        with open(path, "r") as file:
+          data = json.loads(file.read())
+          if "vaults" in data.keys():
+            break
+          else:
+            print("The file is readable, but not containing the key \"vaults\" in it. Please try again!")
+      except:
+        print("The file cannot be found or is not readable. Please try again!")
+    INIT_CONFIG["obsidian-config-path"] = path
+
+    OSS = ObsidianSettingsSync(copy.deepcopy(INIT_CONFIG))
+  
+
+  ### apply args (exept -i/--init)
+
   OSS = ObsidianSettingsSync(copy.deepcopy(INIT_CONFIG))
-
-  ### apply args
 
   # list-values
   if args.list_vaults:
@@ -108,7 +127,7 @@ def main():
 
   # update tool config
   if INIT_CONFIG != OSS.CONFIG:
-    save_config(OSS.CONFIG)
+    config.save_config(OSS.CONFIG)
   quit()
 
 if __name__ == '__main__':
