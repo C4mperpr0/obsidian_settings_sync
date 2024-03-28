@@ -22,6 +22,10 @@ buildPythonApplication rec {
     python-daemon
   ];
 
+  postInstall = "
+    mv -v $out/bin/main.py $out/bin/obsidiansettingssync
+  ";
+
   meta = with lib; {
     # ...
   };
