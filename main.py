@@ -18,8 +18,11 @@ def main():
   parser.add_argument('--add-synced', '-a', action='store', help='Add item to sync list.')
   parser.add_argument('--remove-synced', '-r', action='store', help='Remove item from sync list.')
   parser.add_argument('--master', '-m', action='store_true', help='Print current vault declared as master vault.')
-  parser.add_argument('--set-master', '-S', action='store', help='Set new master by it\'s ID.')
+  parser.add_argument('--set-master', '-M', action='store', help='Set new master by it\'s ID.')
+  parser.add_argument('--set-conf', '-C', action="store", help='Set configuration variable with syntax \"var=value\".')
+  parser.add_argument('--list-conf', '-c', action="store_true", help='List all configuration variables.')
   parser.add_argument('--version', '-v', action="version", version=__version__, help='Show current version of this very tool.')
+  
 
   # parse args
   args = parser.parse_args()
@@ -63,9 +66,31 @@ def main():
   elif args.remove_synced:
     if args.remove_synced in OSS.CONFIG["settings"]["sync"]:
       OSS.CONFIG["settings"]["sync"].remove(args.remove_synced)
+      OSS.CONFIG["settings"]["vault-config-hashes"].pop(args.remove_synced)
       print(f"Removed from sync list: {args.remove_synced}")
     else:
       print(f"Was not in sync list: {args.remove_synced}")
+
+  # list-conf
+  elif args.list_conf:
+    print(f'full_check={OSS.CONFIG["settings"]["full-check"]} # will compare all synced files and not just copy over derivates of master')
+    print(f'master_vault={OSS.CONFIG["settings"]["master-vault"]} # vault from which files will be sync to all other vaults')
+    print(f'auto_open_vault={OSS.CONFIG["settings"]["auto-open-vault"]} # automatically open vault 5s after startup of this program')
+    print(f'obsidian_config_path={OSS.CONFIG["obsidian-config-path"]} # where your obsidian.json is located')
+
+  # set-conf
+  elif args.set_conf:
+    var, val = args.set_conf.split("=")
+    if var == "full_check":
+      OSS.CONFIG["settings"]["full-check"] = val == "True"
+    elif var == "master_vault":
+      OSS.CONFIG["settings"]["master-vault"] = str(val)
+    elif var == "auto_open_vault":
+      OSS.CONFIG["settings"]["auto-open-vault"] = val == "True"
+    elif var == "obsidian_config_path":
+      OSS.CONFIG["obsidian-config-path"] = str(val)
+    else:
+      print(f"Could not find var named \"{var}\"")
 
   # master
   elif args.master:
@@ -78,8 +103,8 @@ def main():
 
   # none
   else:
-    print("No arguments were given.")
-    quit()
+    master_drvs = OSS.check_derivation(OSS.get_master_vault())
+    OSS.sync_all_vaults(master_drvs, full_check=OSS.CONFIG["settings"]["full-check"])
 
   # update tool config
   if INIT_CONFIG != OSS.CONFIG:

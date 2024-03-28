@@ -2,20 +2,26 @@ import json
 import os
 import hashlib
 from vault import Vault
+import shutil
 
 class ObsidianSettingsSync:
     def __init__(self, config):
         self.CONFIG = config
         self.OBSIDIAN_CONFIG = self.load_obsidian_config(config)
 
-    def load_obsidian_config(self, CONFIG):
-        with open(CONFIG["obsidian-config-path"], "r") as file:
+    def load_obsidian_config(self, config):
+        with open(config["obsidian-config-path"], "r") as file:
             return json.loads(file.read())
 
     def get_all_vaults(self):
+        # cache values
+        if hasattr(self, "_ALL_VAULTS"):
+            return self._ALL_VAULTS
+
         vaults = []
         for v in self.OBSIDIAN_CONFIG["vaults"]:
             vaults.append(Vault(v, self.OBSIDIAN_CONFIG["vaults"][v]))
+        self.ALL_VAULTS = vaults
         return vaults
 
     def hash_file(self, file_path, hasher=hashlib.sha512, hex=False):
@@ -32,34 +38,65 @@ class ObsidianSettingsSync:
         for root, dirs, files in os.walk(folder_path):
             for filename in files:
                 file_path = os.path.join(root, filename)
-                file_hash = hash_file(file_path, hasher=hasher)
+                file_hash = self.hash_file(file_path, hasher=hasher)
                 folder_hash.update(file_hash)
         return folder_hash.hexdigest()
 
     def hash_path(self, path):
         if os.path.isfile(path):
-            return hash_file(path, hex=True)
+            return self.hash_file(path, hex=True)
         else:
-            return hash_folder(path)
+            return self.hash_folder(path)
 
     # check derivation of current state of master_vault to last time checked (is updating needed?)
-    def check_derivation(self, master_vault : Vault):
+    def check_derivation(self, vault : Vault, exempt=[]):
+        set_config = vault == self.get_master_vault()
         sync_needed = []
         for item in self.CONFIG["settings"]["sync"]:
+            if item in exempt:
+                # if comparing a vault with the master,
+                # we already now that all derivations within the master itself
+                # must apply to all slaves
+                continue
             if item not in self.CONFIG["settings"]["vault-config-hashes"].keys():
                 sync_needed.append(item)
-                sha = hash_path(os.path.join(master_vault.path, item))
-                self.CONFIG["settings"]["vault-config-hashes"][item] = sha
+                sha = self.hash_path(os.path.join(vault.path, item))
+                if set_config:
+                    self.CONFIG["settings"]["vault-config-hashes"][item] = sha
                 print(f"Added hash for {item}")
             else:
-                cur_sha = hash_path(os.path.join(master_vault.path, item))
+                cur_sha = self.hash_path(os.path.join(vault.path, item))
                 if cur_sha != self.CONFIG["settings"]["vault-config-hashes"][item]:
                     sync_needed.append(item)
-                    self.CONFIG["settings"]["vault-config-hashes"][item] = cur_sha
+                    if set_config:
+                        self.CONFIG["settings"]["vault-config-hashes"][item] = cur_sha
                     print(f"Updated hash for {item}")
+        return sync_needed
 
-    def sync_all_vaults(self):
-        pass
+    def copy(self, src, dst):
+        if os.path.isdir(src):
+            shutil.copytree(src, dst, dirs_exist_ok=True)
+        else:
+            shutil.copy(src, dst)
+
+    # will only copy derivations of master vault to its last check
+    # if full_check: will hash vault2 and compare all with master
+    def sync_derivations(self, master_vault : Vault, vault2 : Vault, drvs, full_check=False):
+        if not full_check:
+            for drv in drvs:
+                print(f"syncing {drv} to {vault2.name}")
+                self.copy(os.path.join(master_vault.path, drv), os.path.join(vault2.path, drv))
+        else:
+            # only need to check drvs that are not changed at the master
+            drvs_to_master = self.check_derivation(vault2, exempt=drvs)
+            for drv in drvs + drvs_to_master:
+                print(f"syncing {drv} to {vault2.name}")
+                self.copy(os.path.join(master_vault.path, drv), os.path.join(vault2.path, drv))  
+
+    def sync_all_vaults(self, master_drvs, full_check=False):
+        for vault in self.get_all_vaults():
+            if vault != self.get_master_vault():
+                self.sync_derivations(self.get_master_vault(), vault, master_drvs, full_check=full_check)
 
     def get_vault_by_id(self, id):
         vaults = self.get_all_vaults()
@@ -70,11 +107,9 @@ class ObsidianSettingsSync:
             return None
 
     def get_master_vault(self):
-        return self.get_vault_by_id(self.CONFIG["settings"]["master-vault"])
+        # cache value
+        if hasattr(self, "_MASTER_VAULT"):
+            return self._MASTER_VAULT
 
-    def temp(self):
-        vaults = get_all_vaults()
-        print(f"vaults found: {len(vaults)}")
-        master_vault = list(filter(lambda vault: vault.id == self.CONFIG["settings"]["master-vault"], vaults))[0]
-        print(f"master-vault: {master_vault}")
-        check_derivation(master_vault) 
+        self._MASTER_VAULT = self.get_vault_by_id(self.CONFIG["settings"]["master-vault"])
+        return self._MASTER_VAULT

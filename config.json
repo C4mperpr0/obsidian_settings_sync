@@ -1,7 +1,8 @@
 {
     "obsidian-config-path": "/home/carl/.config/obsidian/obsidian.json",
     "settings": {
-        "master-vault": "1ea0f684b0e8687c",
+        "full-check": true,
+        "master-vault": "2020f25367418ea7",
         "sync": [
             ".obsidian/plugins/",
             ".obsidian/appearance.json",
@@ -14,7 +15,8 @@
             ".obsidian/appearance.json": "950e276a085ec0adf5d3304092ea0982fc0f8eb0cbb6c95aae22d3ea49e1cd92fce489e052992bc3cc3f3183ad7a15b9b6d1fb27ce4acccdf21f29e1a38d9022",
             ".obsidian/communit-plugins.json": "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e",
             ".obsidian/hotkeys-json": "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e",
-            ".obsidian/types.json": "06c3077e11705d48fe9b4a3e410d57a14e15d6602e133ba433eb9eb59072181570cfed10be7d188327df362e32ed900f8b63fc5fce9f482f0c881aaa0c5dd352"
+            ".obsidian/types.json": "06c3077e11705d48fe9b4a3e410d57a14e15d6602e133ba433eb9eb59072181570cfed10be7d188327df362e32ed900f8b63fc5fce9f482f0c881aaa0c5dd352",
+            ".obsidian/plugins/": "09487d7fff188d38c241e4ed5839af968bfd18b4274bdb5867055a9f83b0001cd4224aa910effeb22be522f0d19ce7a880efd3e6c6dffdb9d635f63ff4020fd7"
         },
         "auto-open-vault": false
     }
