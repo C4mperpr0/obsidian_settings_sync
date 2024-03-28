@@ -4,8 +4,9 @@ from obsidianSettingsSync import ObsidianSettingsSync
 import argparse
 import copy
 import config
+import subprocess
 
-__version__ = "Version 1.1.0 of ObsidianSettingsSync by Carl Heinrich Bellgardt"
+__version__ = "Version 1.2.5 of ObsidianSettingsSync by Carl Heinrich Bellgardt"
 
 def main():
   ### parse arguments
@@ -42,7 +43,6 @@ def main():
     INIT_CONFIG = config.default_config()
     print("\n-------------------- OBSIDIAN CONFIG FILE --------------------")
     print("Where is your obsidian config file (obsidian.json) located? Give the full path! (for example \"/home/exampleuser/.config/obsidian/obsidian.json\")")
-
     while True:
       path = input(" >> ")
       try:
@@ -57,7 +57,67 @@ def main():
     INIT_CONFIG["obsidian-config-path"] = path
 
     OSS = ObsidianSettingsSync(copy.deepcopy(INIT_CONFIG))
-  
+    print("\n-------------------- MASTER VAULT --------------------")
+    vaults = OSS.get_all_vaults()
+    print(f"Detected {len(vaults)} vaults! You can now select your master-vault, from which specified settings will be synced to all other vaults.")
+    print("If you have no vaults at the moment or do not wish to choose no, you can skip this step, and later decide an master-vault via \"obsidiansettingssync --set-master [master_vault_id]\".\n")
+    print("[0] - skip for now")
+    for i_vault in range(len(vaults)):
+      print(f"[{i_vault+1}] - {vaults[i_vault]}")
+    while True:
+      mv_i = input("\nMaster Vault:\n >> ")
+      try:
+        mv_i = int(mv_i)
+      except:
+        print("This is not a valid number! Please try again.")
+        continue
+      if mv_i == 0:
+        print("Skipping this step for now...")
+        break
+      else:
+        mv_i -= 1
+        if mv_i >= 0 and mv_i < len(vaults):
+          OSS.CONFIG["settings"]["master-vault"] = vaults[mv_i].id
+          print(f"Your Master Vault is now \"{OSS.get_master_vault()}\"")
+          break
+        else:
+          print("This number is not an option! Please try again.")
+
+    print("\n-------------------- FULL CHECK --------------------")
+    print("Do you want to enable full-check? If full-check is enabled, everytime this tool runs, it will not only detect changes in the master vault and copy those to all other vaults, but also back-check for changes in all other vaults, and re-copy those (for example if you changed the settings in another vault, they will be overwritten again, even though the master's settings have not changed).")
+    while True:
+      full_check = input("[Y/N] >> ")
+      if full_check.lower() in ["y", "yes", "yehaw"]:
+        print("Full-check enabled.")
+        full_check = True
+      elif full_check.lower() in ["n", "no", "no fucking way"]:
+        print("Full-check disabled.")
+        full_check = False
+      else:
+        print("Could not understand input. Please use \"Y\" or \"N\".")
+        continue
+      OSS.CONFIG["settings"]["full-check"] = full_check
+      break
+
+    print("\n-------------------- AUTO OPEN VAULT --------------------")
+    print("Do you want to automatically run Obsidian every time after running this tool without any arguments (after normal sync)? If disabled, running this tool without any arguments will only sync you settings without opening obsidian afterwards.")
+    while True:
+      auto_open_vault = input("[Y/N] >> ")
+      if auto_open_vault.lower() in ["y", "yes", "yehaw"]:
+        print("Auto-open-vault enabled.")
+        auto_open_vault = True
+      elif auto_open_vault.lower() in ["n", "no", "no fucking way"]:
+        print("Auto-open-vault disabled.")
+        auto_open_vault = False
+      else:
+        print("Could not understand input. Please use \"Y\" or \"N\".")
+        continue
+      OSS.CONFIG["settings"]["auto-open-vault"] = auto_open_vault
+      break
+
+    print("\n\nThis tool should now be fully set up. If everything worked, you can now run this tool without any arguments to sync the settings from your master-vault to all other vaults. If you want to re-run this setup again, run \"obsidiansettingssync --init\". For more information on how to change settings or use this tool, run \"obsidiansettingssync --help\". \n << Obsidian Settings Sync by Carl Heinrich Bellgardt >> ")
+    config.save_config(OSS.CONFIG)
+    quit()
 
   ### apply args (exept -i/--init)
 
@@ -128,6 +188,21 @@ def main():
   # update tool config
   if INIT_CONFIG != OSS.CONFIG:
     config.save_config(OSS.CONFIG)
+
+  if OSS.CONFIG["settings"]["auto-open-vault"]:
+    print("Starting obsidian...")
+    process = subprocess.Popen(["obsidian"])
+    return_code = process.wait()
+    print("Program has exited with return code:", return_code)
+    print("Syncing again...")
+    master_drvs = OSS.check_derivation(OSS.get_master_vault())
+    OSS.sync_all_vaults(master_drvs, full_check=OSS.CONFIG["settings"]["full-check"])
+    print("Done.")
+
+    # update tool config again (just in case (to be sure))
+    if INIT_CONFIG != OSS.CONFIG:
+      config.save_config(OSS.CONFIG)
+
   quit()
 
 if __name__ == '__main__':

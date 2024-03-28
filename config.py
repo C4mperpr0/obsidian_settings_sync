@@ -1,3 +1,6 @@
+import os
+import json
+
 def default_config():
     return {
             "obsidian-config-path": "",
@@ -8,8 +11,7 @@ def default_config():
                 "sync": [
                     ".obsidian/plugins/",
                     ".obsidian/appearance.json",
-                    ".obsidian/communit-plugins.json",
-                    ".obsidian/hotkeys-json",
+                    ".obsidian/community-plugins.json",
                     ".obsidian/types.json"
                     ],
                 "vault-config-hashes": {},

@@ -95,7 +95,7 @@ class ObsidianSettingsSync:
 
     def sync_all_vaults(self, master_drvs, full_check=False):
         for vault in self.get_all_vaults():
-            if vault != self.get_master_vault():
+            if vault.id != self.get_master_vault().id:
                 self.sync_derivations(self.get_master_vault(), vault, master_drvs, full_check=full_check)
 
     def get_vault_by_id(self, id):
