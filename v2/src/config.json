@@ -1,0 +1,14 @@
+{
+    "obsidian-config-path": "/home/carl/.config/obsidian/obsidian.json",
+    "settings": {
+        "versioning": true,
+        "auto-open-vault": true,
+        "sync": [
+            ".obsidian/plugins/",
+            ".obsidian/community-plugins.json"
+            ],
+        "synced-vaults": [],
+        "blacklisted-vaults": [],
+        "sync-new-vaults": true
+        }
+    } 

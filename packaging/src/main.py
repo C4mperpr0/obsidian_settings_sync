@@ -36,7 +36,7 @@ def main():
   INIT_CONFIG = config.load_config()
 
   # Setup helper
-  if config is None or args.init:
+  if INIT_CONFIG is None or args.init:
     print("""
       Welcome to the Obsidian Settings Sync Setup helper!\n The Setup helper is only starting the very first time this program is launched or if it could not detect a valid config.
       If you want to re-run this, just type \"obsidiansettingssync --init\" or type \"obsidiansettingssync --help\" for more information on how to use this tool.
